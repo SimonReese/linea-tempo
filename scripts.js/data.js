@@ -1,0 +1,20 @@
+// The timeline has 0 on Big Bang, 13'800 Millions (13,8 Billions) on Today. So Y years ago is (13'800 - Y) x coord
+const eventsData = [
+    { x: 0, label: "Big Bang", dateLabel: "13,8 miliardi di anni fa", color: 0xFFD700, description: "Il Big Bang: Nascita dell'Universo da un punto infinitamente denso e caldo che inizia ad espandersi." },
+    { x: 9260, label: "Nascita Sistema Solare", dateLabel: "4,54 miliardi di anni fa", color: 0x00FFFF, description: "Il nostro pianeta si forma per aggregazione di polveri e detriti spaziali attorno al giovane Sole." },
+    { x: 9800, label: "Si forma la crosta terrestre", dateLabel: "4 miliardi di anni fa", color: 0x00FFAA, description: "La superficie si raffredda abbastanza da permettere la solidificazione della roccia e la formazione della crosta primordiale."},
+    { x: 10000, label: "Pioggie e Oceani", dateLabel: "3,5 miliardi di anni fa", color: 0x00AAFF, description: "L'atmosfera si raffredda, causando piogge torrenziali durate milioni di anni che riempiono i bacini, dando vita ai primi oceani."},
+    { x: 10300, label: "Prime forme di vita unicellulari", dateLabel: "3,5 miliardi di anni fa", color: 0x00AAFF, description: "Nei fondali oceanici compaiono le prime forme di vita microscopica (batteri e cianobatteri)."},
+    { x: 12800, label: "Prime forme di vita pluricellulari", dateLabel: "1 miliardo di anni fa", color: 0x00AAFF, description: "Le cellule iniziano ad aggregarsi, dando vita a forme di vita più complesse."},
+    { x: 13260, label: "Esplosione Cambriana (Invertebrati)", dateLabel: "540 milioni di anni fa", color: 0x00FAFA, description: "Rapida diversificazione della vita marina; compaiono i primi invertebrati complessi (trilobiti, molluschi)."},
+    { x: 13300, label: "Primi vertebrati", dateLabel: "500 milioni di anni fa", color: 0x00FAFA, description: "Compaiono i primi pesci primitivi dotati di colonna vertebrale."},
+    { x: 13400, label: "Conquista della terra", dateLabel: "400 milioni di anni fa", color: 0x00FAFA, description: "Le piante e i primi organismi terrestri (inclusi gli anfibi) lasciano l'acqua."},
+    { x: 13500, label: "Rettili e foreste", dateLabel: "300 milioni di anni fa", color: 0x00FAFA, description: "I rettili si evolvono potendo deporre uova a guscio duro sulla terraferma, lontani dall'acqua."},
+    { x: 13550, label: "Inizio epoca dei dinosauri", dateLabel: "250 milioni di anni fa", color: 0x00FAFA, description: "I rettili giganti dominano la Terra, mentre compaiono i primi piccoli mammiferi."},
+    { x: 13734, label: "Estinzione dei dinosauri", dateLabel: "66 milioni di anni fa", color: 0x00FAFA, description: "Un meteorite colpisce la Terra causando un'estinzione di massa; sopravvivono i mammiferi."},
+    { x: 13745, label: "Comparsa dei primati", dateLabel: "55 milioni di anni fa", color: 0x00FAFA, description: "Dalle foreste tropicali emergono i primi antenati di scimmie e primati."},
+    { x: 13794, label: "Nascita degli Ominidi", dateLabel: "6 milioni di anni fa", color: 0x00FAFA, description: "In Africa, la linea evolutiva che porta all'essere umano si separa da quella delle grandi scimmie antropomorfe."},
+    { x: 13799.7, label: "L'Uomo Moderno", dateLabel: "300.000 anni fa", color: 0x00FAFA, description: "In Africa compare l'Homo sapiens, dotato di linguaggio complesso e capacità cognitive avanzate."},
+    { x: 13799.9948, label: "La nascita della scrittura", dateLabel: "3200 a.C.", color: 0x00FAFA, description: "In Mesopotamia (Sumeri) nasce la scrittura cuneiforme, segnando ufficialmente la fine della preistoria e l'inizio della storia."},
+    { x: 13800, label: "Oggi", dateLabel: "2026", color: 0x00FF00, description: "L'umanità sviluppa la tecnologia digitale, esplora lo spazio e plasma il futuro del pianeta." },
+];

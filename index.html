@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline dell'Universo - WebGL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Blocca lo scroll nativo del browser */
+            background-color: #050510;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Lascia passare i click al canvas sottostante */
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer" class="flex flex-col justify-between p-6">
+        <div class="text-white font-sans">
+            <h1 class="text-3xl font-bold tracking-tight">Linea del Tempo</h1>
+            <p class="text-gray-400 mt-1">13.8 Miliardi di anni</p>
+        </div>
+        
+        <div class="text-center text-gray-500 text-sm bg-black/40 p-3 rounded-xl backdrop-blur-sm self-center">
+            🖱️ <strong>Trascina</strong> per scorrere | ⚙️ <strong>Rotellina</strong> per zoomare
+        </div>
+    </div>
+
+    <script src="scripts.js/data.js"></script>  <!-- Load events -->
+    <script src="scripts.js/main.js"></script>
+</body>
+</html>
