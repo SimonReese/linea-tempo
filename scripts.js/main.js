@@ -103,7 +103,7 @@ function drawGlowingAxis(glowColor = 0xFFCC00) { // or 0xFF8800 for bright orang
     world.addChild(axisLine);
 }
 
-function drawEventsOnTimeline() {
+function drawEventsOnTimeline() {    
     glowColor = 0xFFCC00;
     eventsData.forEach(event => {
         // Container for single event
@@ -126,7 +126,7 @@ function drawEventsOnTimeline() {
         // Event Text
         const text = new PIXI.Text(event.label, {
             fontFamily: 'Inter, sans-serif',
-            fontSize: 14,
+            fontSize: 20,
             fill: 0xFFFFFF,
             align: 'center'
         });
@@ -137,7 +137,7 @@ function drawEventsOnTimeline() {
         // Date indication
         const dateText = new PIXI.Text(event.dateLabel, {
             fontFamily: 'Arial',
-            fontSize: 11, // smaller
+            fontSize: 16, // smaller
             fill: 0xAAAAAA, // light gray
             align: 'center'
         });
@@ -157,12 +157,12 @@ function drawEventsOnTimeline() {
         // 2. Testo descrittivo con "Rettangolo invisibile" (Word Wrap)
         const descText = new PIXI.Text(event.description || "", {
             fontFamily: 'Inter, sans-serif',
-            fontSize: 10,
+            fontSize: 16,
             fill: 0x888888, // Grigio ancora più tenue
             align: 'center',
             wordWrap: true, // ABILITA L'A CAPO AUTOMATICO
             wordWrapWidth: 160, // LARGHEZZA DEL "RETTANGOLO INVISIBILE" (in pixel)
-            lineHeight: 14 // Distanza tra le righe di testo
+            lineHeight: 18 // Distanza tra le righe di testo
         });
         
         descText.anchor.set(0.5, 0); // Centrato orizzontalmente
