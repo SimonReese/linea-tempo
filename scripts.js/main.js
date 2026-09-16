@@ -19,12 +19,12 @@ const app = new PIXI.Application({
 document.body.appendChild(app.view);
 
 // Bg images
-const bgImagesLayer = new PIXI.Container();
+// const bgImagesLayer = new PIXI.Container();
 // BG container
 const bgContainer = new PIXI.Container();
 // Main container (moved and scaled)
 const world = new PIXI.Container();
-app.stage.addChild(bgImagesLayer);
+// app.stage.addChild(bgImagesLayer);
 app.stage.addChild(bgContainer);
 app.stage.addChild(world);
 
@@ -182,37 +182,40 @@ function drawEventsOnTimeline() {
         evtContainer.addChild(descText);
 
         // Backgroud image if present
-        let bgSprite = null;
+        // --- IMMAGINE MINIATURA (THUMBNAIL) ---
+        let thumbnailSprite = null;
         if (event.bgImage) {
-            // 1. Creiamo uno sprite "vuoto" all'inizio
-            bgSprite = new PIXI.Sprite(); 
-            bgSprite.anchor.set(0.5); 
-            bgSprite.x = app.screen.width / 2;
-            bgSprite.y = app.screen.height / 2;
-            bgSprite.alpha = 0; // Invisibile finché non zoomi
-            bgImagesLayer.addChild(bgSprite);
+            thumbnailSprite = new PIXI.Sprite(); 
+            // Ancoraggio: centro orizzontale, IN BASSO verticalmente
+            thumbnailSprite.anchor.set(0.5, 1); 
             
-            // 2. Chiediamo a Pixi di caricare l'immagine IN BACKGROUND (Asincrono)
+            // La posizioniamo SOPRA il titolo (il titolo è a -15, la mettiamo a -40)
+            thumbnailSprite.y = -40; 
+            
+            // La aggiungiamo direttamente al contenitore dell'evento!
+            evtContainer.addChild(thumbnailSprite);
+            
+            // Caricamento asincrono
             PIXI.Assets.load(event.bgImage).then((texture) => {
-                // 3. Quando l'immagine è pronta, la "incolliamo" sullo sprite vuoto
-                bgSprite.texture = texture; 
+                thumbnailSprite.texture = texture; 
                 
-                // ORA l'immagine esiste davvero e possiamo usare le sue dimensioni reali (texture.width)
-                const scaleX = app.screen.width / texture.width;
-                const scaleY = app.screen.height / texture.height;
-                
-                // store base size
-                bgSprite.baseScale = Math.min(scaleX, scaleY) * 0.9;
+                // La ridimensioniamo per essere larga 160px (come la descrizione)
+                const targetWidth = 160;
+                const scale = targetWidth / texture.width;
+                thumbnailSprite.scale.set(scale); 
             });
         }
 
-        // Add container to list of element to inverse scale when zooming (if zoom in -> reduce element)
-        invariantItems.push({   // Store object with also mindistance and elements to fade in the array
+        // --- AGGIORNAMENTO DEL PUSH ---
+        // Mettiamo in una lista tutti gli elementi che devono sfumare
+        const elementsToFade = [connectorLine, descText, dateText];
+        // Se l'immagine c'è, diciamo al sistema di sfumare anche quella!
+        if (thumbnailSprite) elementsToFade.push(thumbnailSprite);
+
+        invariantItems.push({   
             container: evtContainer,
-            eventX: event.x,    // Where is the event on x axis
-            bgSprite: bgSprite, // image reference
-            minDist: minDist,   // minimum discance of this object to neighbour
-            elementsToFade: [connectorLine, descText, dateText] // elemenst to show/hide on distance
+            minDist: minDist,   
+            elementsToFade: elementsToFade 
         });
     });
 
@@ -301,61 +304,18 @@ function updateScene() {
     invariantItems.forEach(item => {
         item.container.scale.x = inverseScaleX;
 
-        // Compute distance on screen
+        // --- LOGICA DISSOLVENZA UNIFICATA (Testi e Immagini) ---
         const screenDist = item.minDist * world.scale.x;
         
-        // Dynamic dissolvence: show over 160px, hide at less than 80px, fade in between
         let targetAlpha = 0;
         if (screenDist > 160) {
             targetAlpha = 1;
         } else if (screenDist > 80) {
-            targetAlpha = (screenDist - 80) / 80; // Crea un valore tra 0 e 1
+            targetAlpha = (screenDist - 80) / 80; 
         }
         
-        // Applica l'opacità calcolata agli elementi scelti
-        item.elementsToFade.forEach(el => {
-            el.alpha = targetAlpha;
-        });
-
-        // --- NUOVA LOGICA SFONDI: MULTI-SOGLIA ---
-        // --- 2. LOGICA IMMAGINE: MINIATURA -> SCHERMO INTERO ---
-        if (item.bgSprite && item.bgSprite.baseScale) {
-            
-            // L'opacità dell'immagine ora segue ESATTAMENTE quella del testo
-            let zoomAlpha = targetAlpha; 
-
-            // Calcoliamo quanto bisogna zoomare *oltre* la comparsa del testo 
-            // per far diventare l'immagine a tutto schermo (es. 15 volte di più)
-            const textFullScale = 160 / item.minDist; 
-            const imageFullScale = textFullScale * 15; 
-            
-            let imgScaleProgress = 0;
-            if (world.scale.x > textFullScale) {
-                // Calcola la percentuale di crescita (da 0 a 1)
-                imgScaleProgress = (world.scale.x - textFullScale) / (imageFullScale - textFullScale);
-                imgScaleProgress = Math.min(Math.max(imgScaleProgress, 0), 1);
-            }
-
-            // L'immagine parte come "miniatura" al 15% della sua grandezza
-            // e cresce fino al 100% (1.0) man mano che scendi in profondità
-            const minImageScale = 0.15; 
-            const currentBoost = minImageScale + (imgScaleProgress * (1 - minImageScale));
-            item.bgSprite.scale.set(item.bgSprite.baseScale * currentBoost);
-
-            // Dissolvenza laterale (sfuma se ti sposti a destra/sinistra dal centro)
-            const eventScreenX = world.x + (item.eventX * world.scale.x);
-            const distFromCenter = Math.abs(screenCenter - eventScreenX);
-            const fadeDistance = app.screen.width * 0.4; 
-            
-            let panAlpha = 0;
-            if (distFromCenter < fadeDistance) {
-                panAlpha = 1 - (distFromCenter / fadeDistance);
-            }
-            
-            // Combiniamo opacità e teniamo l'immagine incollata all'evento!
-            item.bgSprite.alpha = zoomAlpha * panAlpha;
-            item.bgSprite.x = eventScreenX; 
-        }
+        // Applica l'opacità a tutto (descrizioni, barrette e miniature!)
+        item.elementsToFade.forEach(el => el.alpha = targetAlpha);
     });
     // Axis Y is fixed at scale 1
 
