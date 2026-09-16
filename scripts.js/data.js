@@ -4,7 +4,7 @@ const eventsData = [
         description: "Il Big Bang: Nascita dell'Universo da un punto infinitamente denso e caldo che inizia ad espandersi." },
     { x: 9260, label: "Nascita Sistema Solare", dateLabel: "4,54 miliardi di anni fa", color: 0x00FFFF, bgImage:"images/solar.jpeg",
         description: "Il nostro pianeta si forma per aggregazione di polveri e detriti spaziali attorno al giovane Sole." },
-    { x: 9800, label: "Si forma la crosta terrestre", dateLabel: "4 miliardi di anni fa", color: 0x00FFAA, 
+    { x: 9800, label: "Si forma la crosta terrestre", dateLabel: "4 miliardi di anni fa", color: 0x00FFAA, bgImage:"images/crosta.jpg",
         description: "La superficie si raffredda abbastanza da permettere la solidificazione della roccia e la formazione della crosta primordiale."},
     { x: 10000, label: "Pioggie e Oceani", dateLabel: "3,5 miliardi di anni fa", color: 0x00AAFF, 
         description: "L'atmosfera si raffredda, causando piogge torrenziali durate milioni di anni che riempiono i bacini, dando vita ai primi oceani."},

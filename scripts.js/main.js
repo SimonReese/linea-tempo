@@ -201,8 +201,8 @@ function drawEventsOnTimeline() {
                 const scaleX = app.screen.width / texture.width;
                 const scaleY = app.screen.height / texture.height;
                 
-                // La ingrandiamo per coprire tutto lo schermo
-                bgSprite.scale.set(Math.min(scaleX, scaleY) * 0.9); 
+                // store base size
+                bgSprite.baseScale = Math.min(scaleX, scaleY) * 0.9;
             });
         }
 
@@ -293,7 +293,9 @@ function updateScene() {
     const inverseScaleX = 1 / world.scale.x;
 
     const screenCenter = app.screen.width / 2;
-    const minZoomForBg = initialScale * 20;
+    // NUOVO: Un corridoio di zoom invece di un limite netto
+    const zoomFadeStart = initialScale * 10; // Inizia a comparire dolcemente qui
+    const zoomFadeEnd = initialScale * 30;   // Arriva al 100% di visibilità qui
 
     
     invariantItems.forEach(item => {
@@ -315,28 +317,39 @@ function updateScene() {
             el.alpha = targetAlpha;
         });
 
-        if (item.bgSprite) {
-            // Calcoliamo dove si trova questo specifico evento sullo schermo in questo esatto millisecondo
+        // --- NUOVA LOGICA SFONDI: MULTI-SOGLIA ---
+        if (item.bgSprite && item.bgSprite.baseScale) {
+            
+            // 1. DISSOLVENZA ZOOM (Asse Z)
+            let zoomAlpha = 0;
+            if (world.scale.x > zoomFadeEnd) {
+                zoomAlpha = 1;
+            } else if (world.scale.x > zoomFadeStart) {
+                // Calcola un valore tra 0.01 e 0.99 nel corridoio di zoom
+                zoomAlpha = (world.scale.x - zoomFadeStart) / (zoomFadeEnd - zoomFadeStart);
+            }
+
+            // 2. DISSOLVENZA POSIZIONE (Asse X)
             const eventScreenX = world.x + (item.eventX * world.scale.x);
-            
-            // Distanza dal centro esatto dello schermo (in pixel)
             const distFromCenter = Math.abs(screenCenter - eventScreenX);
+            const fadeDistance = app.screen.width * 0.4; 
             
-            let targetBgAlpha = 0;
-            
-            // Procediamo solo se abbiamo zoomato abbastanza
-            if (world.scale.x > minZoomForBg) {
-                // Raggio di attivazione (es. inizia a sfumare quando entra nella metà centrale dello schermo)
-                const fadeDistance = app.screen.width * 0.4; 
-                
-                if (distFromCenter < fadeDistance) {
-                    // Più è vicino al centro (distFromCenter si avvicina a 0), più l'alpha si avvicina a 1
-                    targetBgAlpha = 1 - (distFromCenter / fadeDistance);
-                }
+            let panAlpha = 0;
+            if (distFromCenter < fadeDistance) {
+                panAlpha = 1 - (distFromCenter / fadeDistance);
             }
             
-            // Applichiamo l'opacità calcolata all'immagine
-            item.bgSprite.alpha = targetBgAlpha;
+            // 3. COMBINAZIONE ED EFFETTO WOW
+            // L'opacità è il prodotto delle due forze (es. 100% vicino al centro * 50% di zoom = 50% trasparente)
+            item.bgSprite.alpha = zoomAlpha * panAlpha;
+
+            // Effetto Parallasse Z: L'immagine parte leggermente più piccola (80%) 
+            // e si ingrandisce fino alla dimensione finale mano a mano che lo zoomAlpha sale.
+            const scaleBoost = 0.8 + (zoomAlpha * 0.2); 
+            item.bgSprite.scale.set(item.bgSprite.baseScale * scaleBoost);
+
+            // Set image x
+            item.bgSprite.x = eventScreenX;
         }
     });
     // Axis Y is fixed at scale 1
