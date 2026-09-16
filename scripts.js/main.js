@@ -222,69 +222,125 @@ function drawEventsOnTimeline() {
 }
 
 function setupInteractions() {
-    // Set stage to intercept clicks
     app.stage.eventMode = 'static';
-    // Set hit area as whole screen (update during resize to match again)
     app.stage.hitArea = new PIXI.Rectangle(0, 0, app.screen.width, app.screen.height);
 
-    let isDragging = false;
+    // --- NUOVO: MAPPA DEI TOCCHI ATTIVI ---
+    const activePointers = new Map();
+
+    // Variabili per il Drag (1 dito o mouse)
     let dragStartX = 0;
     let worldStartX = 0;
 
+    // Variabili per il Pinch Zoom (2 dita)
+    let initialPinchDistance = 0;
+    let initialPinchScale = 0;
+    let pinchPointToZoom = 0;
+
     app.stage.on('pointerdown', (e) => {
-        isDragging = true;
-        dragStartX = e.global.x;
-        worldStartX = world.x;
-        document.body.style.cursor = 'grabbing';
+        // Registra il dito (o il click del mouse)
+        activePointers.set(e.pointerId, { x: e.global.x, y: e.global.y });
+
+        if (activePointers.size === 1) {
+            // Inizia il trascinamento
+            dragStartX = e.global.x;
+            worldStartX = world.x;
+            document.body.style.cursor = 'grabbing';
+        } 
+        else if (activePointers.size === 2) {
+            // Inizia lo zoom
+            const pointers = Array.from(activePointers.values());
+            const p1 = pointers[0];
+            const p2 = pointers[1];
+            
+            // Teorema di Pitagora per trovare la distanza iniziale tra le due dita
+            initialPinchDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            initialPinchScale = world.scale.x;
+            
+            // Trova il punto esatto in mezzo alle due dita (per zoomare lì)
+            const pinchMidpointX = (p1.x + p2.x) / 2;
+            pinchPointToZoom = (pinchMidpointX - world.x) / world.scale.x;
+        }
     });
 
     app.stage.on('pointermove', (e) => {
-        if (!isDragging) return;
-        const dx = e.global.x - dragStartX;
-        world.x = worldStartX + dx; // Muove solo sull'asse X
+        if (!activePointers.has(e.pointerId)) return;
+
+        // Aggiorna la posizione di questo specifico dito
+        activePointers.set(e.pointerId, { x: e.global.x, y: e.global.y });
+
+        if (activePointers.size === 1) {
+            // --- MODALITA' TRASCINAMENTO ---
+            const dx = e.global.x - dragStartX;
+            world.x = worldStartX + dx;
+            world.previousX = world.x; // Previene il teletrasporto delle stelle
+        } 
+        else if (activePointers.size === 2) {
+            // --- MODALITA' ZOOM A DUE DITA ---
+            const pointers = Array.from(activePointers.values());
+            const p1 = pointers[0];
+            const p2 = pointers[1];
+            
+            const currentDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const scaleMultiplier = currentDistance / initialPinchDistance;
+            
+            // Applica e limita la scala
+            let newScale = initialPinchScale * scaleMultiplier;
+            const maxScale = 500000000000000000;
+            if(newScale < initialScale / 2) newScale = initialScale / 2;
+            if(newScale > maxScale) newScale = maxScale;
+            
+            world.scale.x = newScale;
+
+            // Sposta l'asse per tenere fermo il punto tra le dita mentre si allargano
+            const currentMidpointX = (p1.x + p2.x) / 2;
+            world.x = currentMidpointX - (pinchPointToZoom * world.scale.x);
+            world.previousX = world.x;
+        }
     });
 
-    app.stage.on('pointerup', stopDrag);
-    app.stage.on('pointerupoutside', stopDrag);
-
-    function stopDrag() {
-        isDragging = false;
-        document.body.style.cursor = 'default';
-    }
-
-    // Zoom management
-    app.view.addEventListener('wheel', (e) => {
-        e.preventDefault(); // Avoid page scroll
+    const removePointer = (e) => {
+        // Elimina il dito dalla mappa quando lo sollevi
+        activePointers.delete(e.pointerId);
         
-        // Zoom Intensity
+        if (activePointers.size === 1) {
+            // "Recupero fluido": se sollevi un dito mentre zoomavi,
+            // l'altro dito riprende istantaneamente a trascinare senza salti.
+            const remainingPointer = Array.from(activePointers.values())[0];
+            dragStartX = remainingPointer.x;
+            worldStartX = world.x;
+        } else if (activePointers.size === 0) {
+            document.body.style.cursor = 'default';
+        }
+    };
+
+    app.stage.on('pointerup', removePointer);
+    app.stage.on('pointerupoutside', removePointer);
+    app.stage.on('pointercancel', removePointer); // Cruciale su mobile (se appare una notifica o esci)
+
+    // --- IL VECCHIO CODICE DELLO ZOOM CON LA ROTELLINA DEL MOUSE RESTA UGUALE ---
+    app.view.addEventListener('wheel', (e) => {
+        e.preventDefault(); 
+        
         const zoomFactor = 1.1;
         const isZoomingIn = e.deltaY < 0;
         const scaleMultiplier = isZoomingIn ? zoomFactor : (1 / zoomFactor);
-
-        // Where to zoom
         const mouseX = e.offsetX;
-        
-        // Compute at which coords the current pointer is (mouse position - world container position) / current scale
         const pointToZoom = (mouseX - world.x) / world.scale.x;
 
-        // Applay new scale only along X, keep Y at scale 1 to avoid fatness of line
         world.scale.x *= scaleMultiplier;
 
-        // Set zoom max scale to avoi crash
-        const maxScale = 500000000000000000 //500000
-        if(world.scale.x < initialScale / 2) world.scale.x = initialScale / 2; // Zoom out max
-        if(world.scale.x > maxScale) world.scale.x = maxScale; // Zoom in max
+        const maxScale = 500000000000000000;
+        if(world.scale.x < initialScale / 2) world.scale.x = initialScale / 2; 
+        if(world.scale.x > maxScale) world.scale.x = maxScale; 
 
-        // Compute world container x position to avoid shift when zooming (mouse position - (pointed coordinate * world scale))
-        // Formula: PosizioneMouseSchermo - (PuntoMondiale * NuovaScala)
         world.x = mouseX - (pointToZoom * world.scale.x);
-
         world.previousX = world.x;
     });
 
-    // Manage window resize
+    // Ridimensionamento finestra
     window.addEventListener('resize', () => {
-        world.y = app.screen.height / 2; // Ricentra verticalmente
+        world.y = app.screen.height / 2; 
         app.stage.hitArea = new PIXI.Rectangle(0, 0, app.screen.width, app.screen.height);
     });
 }
