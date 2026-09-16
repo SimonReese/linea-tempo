@@ -71,10 +71,37 @@ world.scale.x = initialScale;
 world.x = margin / 2; // Move container half margin to center both sides
 
 // 1. Draw timeline axis line
+// const axisLine = new PIXI.Graphics();
+// axisLine.lineStyle(2, 0x333344, 1); // Width 2, grey blue
+// axisLine.moveTo(START_YEAR, 0);
+// axisLine.lineTo(END_YEAR, 0);
+// world.addChild(axisLine);
+
+// 1. Draw timeline axis line (Effetto Glow Arancione/Giallo)
 const axisLine = new PIXI.Graphics();
-axisLine.lineStyle(2, 0x333344, 1); // Width 2, grey blue
+
+const glowColor = 0xFFCC00; //0xFF8800; // Arancione luminoso
+
+// Livello 1: Bagliore esterno (largo e quasi trasparente)
+axisLine.lineStyle(15, glowColor, 0.05); 
 axisLine.moveTo(START_YEAR, 0);
 axisLine.lineTo(END_YEAR, 0);
+
+// Livello 2: Bagliore intermedio
+axisLine.lineStyle(8, glowColor, 0.15); 
+axisLine.moveTo(START_YEAR, 0);
+axisLine.lineTo(END_YEAR, 0);
+
+// Livello 3: Bagliore interno più intenso
+axisLine.lineStyle(3, glowColor, 0.4); 
+axisLine.moveTo(START_YEAR, 0);
+axisLine.lineTo(END_YEAR, 0);
+
+// Livello 4: Il "nucleo" della linea (sottile, giallo chiarissimo/bianco)
+axisLine.lineStyle(1, 0xFFEEDD, 1); 
+axisLine.moveTo(START_YEAR, 0);
+axisLine.lineTo(END_YEAR, 0);
+
 world.addChild(axisLine);
 
 // 2. Event data
@@ -96,9 +123,22 @@ eventsData.forEach(event => {
     world.addChild(evtContainer);
 
     // Draw marker (ball)
+    // const marker = new PIXI.Graphics();
+    // marker.beginFill(event.color);
+    // marker.drawCircle(0, 0, 6); // Radius 6
+    // marker.endFill();
+    // evtContainer.addChild(marker);
+
+    // Invece di disegnare un solo cerchio...
     const marker = new PIXI.Graphics();
-    marker.beginFill(event.color);
-    marker.drawCircle(0, 0, 6); // Radius 6
+    
+    // Alone del cerchio
+    marker.beginFill(glowColor, 0.2); // event.color // Colore dell'evento, opacità 20%
+    marker.drawCircle(0, 0, 12); // Raggio doppio
+    marker.endFill();
+    // Centro del cerchio
+    marker.beginFill(0xFFEEDD, 1); // Opacità 100%
+    marker.drawCircle(0, 0, 5); // Raggio normale
     marker.endFill();
     evtContainer.addChild(marker);
 
