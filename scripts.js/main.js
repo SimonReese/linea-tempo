@@ -318,18 +318,31 @@ function updateScene() {
         });
 
         // --- NUOVA LOGICA SFONDI: MULTI-SOGLIA ---
+        // --- 2. LOGICA IMMAGINE: MINIATURA -> SCHERMO INTERO ---
         if (item.bgSprite && item.bgSprite.baseScale) {
             
-            // 1. DISSOLVENZA ZOOM (Asse Z)
-            let zoomAlpha = 0;
-            if (world.scale.x > zoomFadeEnd) {
-                zoomAlpha = 1;
-            } else if (world.scale.x > zoomFadeStart) {
-                // Calcola un valore tra 0.01 e 0.99 nel corridoio di zoom
-                zoomAlpha = (world.scale.x - zoomFadeStart) / (zoomFadeEnd - zoomFadeStart);
+            // L'opacità dell'immagine ora segue ESATTAMENTE quella del testo
+            let zoomAlpha = targetAlpha; 
+
+            // Calcoliamo quanto bisogna zoomare *oltre* la comparsa del testo 
+            // per far diventare l'immagine a tutto schermo (es. 15 volte di più)
+            const textFullScale = 160 / item.minDist; 
+            const imageFullScale = textFullScale * 15; 
+            
+            let imgScaleProgress = 0;
+            if (world.scale.x > textFullScale) {
+                // Calcola la percentuale di crescita (da 0 a 1)
+                imgScaleProgress = (world.scale.x - textFullScale) / (imageFullScale - textFullScale);
+                imgScaleProgress = Math.min(Math.max(imgScaleProgress, 0), 1);
             }
 
-            // 2. DISSOLVENZA POSIZIONE (Asse X)
+            // L'immagine parte come "miniatura" al 15% della sua grandezza
+            // e cresce fino al 100% (1.0) man mano che scendi in profondità
+            const minImageScale = 0.15; 
+            const currentBoost = minImageScale + (imgScaleProgress * (1 - minImageScale));
+            item.bgSprite.scale.set(item.bgSprite.baseScale * currentBoost);
+
+            // Dissolvenza laterale (sfuma se ti sposti a destra/sinistra dal centro)
             const eventScreenX = world.x + (item.eventX * world.scale.x);
             const distFromCenter = Math.abs(screenCenter - eventScreenX);
             const fadeDistance = app.screen.width * 0.4; 
@@ -339,17 +352,9 @@ function updateScene() {
                 panAlpha = 1 - (distFromCenter / fadeDistance);
             }
             
-            // 3. COMBINAZIONE ED EFFETTO WOW
-            // L'opacità è il prodotto delle due forze (es. 100% vicino al centro * 50% di zoom = 50% trasparente)
+            // Combiniamo opacità e teniamo l'immagine incollata all'evento!
             item.bgSprite.alpha = zoomAlpha * panAlpha;
-
-            // Effetto Parallasse Z: L'immagine parte leggermente più piccola (80%) 
-            // e si ingrandisce fino alla dimensione finale mano a mano che lo zoomAlpha sale.
-            const scaleBoost = 0.8 + (zoomAlpha * 0.2); 
-            item.bgSprite.scale.set(item.bgSprite.baseScale * scaleBoost);
-
-            // Set image x
-            item.bgSprite.x = eventScreenX;
+            item.bgSprite.x = eventScreenX; 
         }
     });
     // Axis Y is fixed at scale 1
