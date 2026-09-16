@@ -18,10 +18,13 @@ const app = new PIXI.Application({
 });
 document.body.appendChild(app.view);
 
+// Bg images
+const bgImagesLayer = new PIXI.Container();
 // BG container
 const bgContainer = new PIXI.Container();
 // Main container (moved and scaled)
 const world = new PIXI.Container();
+app.stage.addChild(bgImagesLayer);
 app.stage.addChild(bgContainer);
 app.stage.addChild(world);
 
@@ -103,13 +106,21 @@ function drawGlowingAxis(glowColor = 0xFFCC00) { // or 0xFF8800 for bright orang
     world.addChild(axisLine);
 }
 
-function drawEventsOnTimeline() {    
+function drawEventsOnTimeline() {
+    // Sort data by x coords
+    eventsData.sort((a, b) => a.x - b.x);
+    
     glowColor = 0xFFCC00;
-    eventsData.forEach(event => {
+    eventsData.forEach((event, index) => {
         // Container for single event
         const evtContainer = new PIXI.Container();
         evtContainer.x = event.x;
         world.addChild(evtContainer);
+
+        // Compute distance to nearest neighbour
+        const distPrev = index > 0 ? (event.x - eventsData[index - 1].x) : Infinity;
+        const distNext = index < eventsData.length - 1 ? (eventsData[index + 1].x - event.x) : Infinity;
+        const minDist = Math.min(distPrev, distNext);
 
         // We draw two circles
         const marker = new PIXI.Graphics();
@@ -168,11 +179,41 @@ function drawEventsOnTimeline() {
         descText.anchor.set(0.5, 0); // Centrato orizzontalmente
         descText.x = 0;
         descText.y = 85; // Posizionato sotto la barretta
-        
         evtContainer.addChild(descText);
 
+        // Backgroud image if present
+        let bgSprite = null;
+        if (event.bgImage) {
+            // 1. Creiamo uno sprite "vuoto" all'inizio
+            bgSprite = new PIXI.Sprite(); 
+            bgSprite.anchor.set(0.5); 
+            bgSprite.x = app.screen.width / 2;
+            bgSprite.y = app.screen.height / 2;
+            bgSprite.alpha = 0; // Invisibile finché non zoomi
+            bgImagesLayer.addChild(bgSprite);
+            
+            // 2. Chiediamo a Pixi di caricare l'immagine IN BACKGROUND (Asincrono)
+            PIXI.Assets.load(event.bgImage).then((texture) => {
+                // 3. Quando l'immagine è pronta, la "incolliamo" sullo sprite vuoto
+                bgSprite.texture = texture; 
+                
+                // ORA l'immagine esiste davvero e possiamo usare le sue dimensioni reali (texture.width)
+                const scaleX = app.screen.width / texture.width;
+                const scaleY = app.screen.height / texture.height;
+                
+                // La ingrandiamo per coprire tutto lo schermo
+                bgSprite.scale.set(Math.min(scaleX, scaleY) * 0.9); 
+            });
+        }
+
         // Add container to list of element to inverse scale when zooming (if zoom in -> reduce element)
-        invariantItems.push(evtContainer);
+        invariantItems.push({   // Store object with also mindistance and elements to fade in the array
+            container: evtContainer,
+            eventX: event.x,    // Where is the event on x axis
+            bgSprite: bgSprite, // image reference
+            minDist: minDist,   // minimum discance of this object to neighbour
+            elementsToFade: [connectorLine, descText, dateText] // elemenst to show/hide on distance
+        });
     });
 
 }
@@ -250,9 +291,53 @@ function updateScene() {
     // Invariant scaling: since we scale along X, the items would be streched horizontally
     // to avoid this, we apply them an inverse scaling factor
     const inverseScaleX = 1 / world.scale.x;
+
+    const screenCenter = app.screen.width / 2;
+    const minZoomForBg = initialScale * 20;
+
     
     invariantItems.forEach(item => {
-        item.scale.x = inverseScaleX;
+        item.container.scale.x = inverseScaleX;
+
+        // Compute distance on screen
+        const screenDist = item.minDist * world.scale.x;
+        
+        // Dynamic dissolvence: show over 160px, hide at less than 80px, fade in between
+        let targetAlpha = 0;
+        if (screenDist > 160) {
+            targetAlpha = 1;
+        } else if (screenDist > 80) {
+            targetAlpha = (screenDist - 80) / 80; // Crea un valore tra 0 e 1
+        }
+        
+        // Applica l'opacità calcolata agli elementi scelti
+        item.elementsToFade.forEach(el => {
+            el.alpha = targetAlpha;
+        });
+
+        if (item.bgSprite) {
+            // Calcoliamo dove si trova questo specifico evento sullo schermo in questo esatto millisecondo
+            const eventScreenX = world.x + (item.eventX * world.scale.x);
+            
+            // Distanza dal centro esatto dello schermo (in pixel)
+            const distFromCenter = Math.abs(screenCenter - eventScreenX);
+            
+            let targetBgAlpha = 0;
+            
+            // Procediamo solo se abbiamo zoomato abbastanza
+            if (world.scale.x > minZoomForBg) {
+                // Raggio di attivazione (es. inizia a sfumare quando entra nella metà centrale dello schermo)
+                const fadeDistance = app.screen.width * 0.4; 
+                
+                if (distFromCenter < fadeDistance) {
+                    // Più è vicino al centro (distFromCenter si avvicina a 0), più l'alpha si avvicina a 1
+                    targetBgAlpha = 1 - (distFromCenter / fadeDistance);
+                }
+            }
+            
+            // Applichiamo l'opacità calcolata all'immagine
+            item.bgSprite.alpha = targetBgAlpha;
+        }
     });
     // Axis Y is fixed at scale 1
 
