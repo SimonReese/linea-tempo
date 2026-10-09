@@ -236,13 +236,14 @@ function drawEventsOnTimeline() {
         // Mettiamo in una lista tutti gli elementi che devono sfumare
         const elementsToFade = [connectorLine, descText, dateText];
         // Se l'immagine c'è, diciamo al sistema di sfumare anche quella!
-        if (thumbnailSprite) elementsToFade.push(thumbnailSprite);
+        //if (thumbnailSprite) elementsToFade.push(thumbnailSprite);
 
         invariantItems.push({   
             container: evtContainer,
             minDist: minDist,   
             titleElement: text,
             markerElement: marker,
+            thumbnailElement: thumbnailSprite,
             macroEvent: event.macroEvent || false,
             elementsToFade: elementsToFade,
         });
@@ -424,6 +425,22 @@ function updateScene() {
             markerAlpha = (screenDist - 8) / 12;
         }
         item.markerElement.alpha = markerAlpha;
+
+        // --- 4. NUOVA LOGICA: DISSOLVENZA IMMAGINI (Thumbnail) ---
+        if (item.thumbnailElement) {
+            let thumbnailAlpha = 0;
+            
+            // Le immagini secondarie hanno bisogno di molto spazio (160px).
+            // Ma se l'evento è primario (macroEvent), l'immagine resta visibile sempre!
+            if (screenDist > 160 || item.macroEvent) {
+                thumbnailAlpha = 1;
+            } else if (screenDist > 80) {
+                // Sfumatura graduale per gli eventi secondari
+                thumbnailAlpha = (screenDist - 80) / 80;
+            }
+            
+            item.thumbnailElement.alpha = thumbnailAlpha;
+        }
     });
     // Axis Y is fixed at scale 1
 
