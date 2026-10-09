@@ -425,6 +425,13 @@ function updateScene() {
             markerAlpha = (screenDist - 8) / 12;
         }
         item.markerElement.alpha = markerAlpha;
+        // --- NUOVO: GESTIONE CLICK ---
+        // Se il pallino è completamente visibile, accendi il click. Altrimenti, spegnilo.
+        if (markerAlpha === 1) {
+            item.markerElement.eventMode = 'static'; // Cliccabile (mostra manina)
+        } else {
+            item.markerElement.eventMode = 'none';   // Disattivato (completamente ignorato dal mouse)
+        }
 
         // --- 4. NUOVA LOGICA: DISSOLVENZA IMMAGINI (Thumbnail) ---
         if (item.thumbnailElement) {
