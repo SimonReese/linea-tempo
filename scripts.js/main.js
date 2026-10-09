@@ -134,12 +134,38 @@ function drawEventsOnTimeline() {
         marker.endFill();
         evtContainer.addChild(marker);
 
+        // --- NUOVO: RENDIAMO IL PALLINO INTERATTIVO ---
+        marker.eventMode = 'static'; // Rende l'oggetto cliccabile
+        marker.cursor = 'pointer';   // Mostra la manina quando ci passi sopra
+        marker.on('pointerdown', (e) => {
+            // Impedisce che il click sul pallino faccia partire il trascinamento dell'asse
+            e.stopPropagation(); 
+            
+            // 1. Riempiamo la modale HTML con i dati di QUESTO evento
+            modalTitle.innerText = event.label;
+            modalDate.innerText = event.dateLabel;
+            modalDesc.innerText = event.description || "Nessuna descrizione disponibile.";
+            
+            if (event.bgImage) {
+                modalImage.src = event.bgImage; // Carica la foto nella finestra
+                modalImage.style.display = 'block';
+            } else {
+                modalImage.style.display = 'none'; // Nascondi se non c'è foto
+            }
+            
+            // 2. Facciamo apparire la modale (flex la centra nello schermo)
+            modalOverlay.style.display = 'flex'; 
+        });
+
         // Event Text
-        const text = new PIXI.Text(event.label, {
+        const text = new PIXI.Text(event.label, {   
             fontFamily: 'Inter, sans-serif',
             fontSize: 20,
             fill: 0xFFFFFF,
-            align: 'center'
+            align: 'center',
+            wordWrap: true,        // <-- ABILITA L'A CAPO
+            wordWrapWidth: 150,    // <-- LARGHEZZA MASSIMA (in pixel)
+            lineHeight: 22         // <-- DISTANZA TRA LE RIGHE
         });
         text.anchor.set(0.5, 1); // Anchor point of textbox, middle bottom 
         text.y = -15; // Set text relative to parent y (y downwards so is above)
@@ -190,7 +216,7 @@ function drawEventsOnTimeline() {
             thumbnailSprite.anchor.set(0.5, 1); 
             
             // La posizioniamo SOPRA il titolo (il titolo è a -15, la mettiamo a -40)
-            thumbnailSprite.y = -40; 
+            thumbnailSprite.y = -95; 
             
             // La aggiungiamo direttamente al contenitore dell'evento!
             evtContainer.addChild(thumbnailSprite);
@@ -215,7 +241,10 @@ function drawEventsOnTimeline() {
         invariantItems.push({   
             container: evtContainer,
             minDist: minDist,   
-            elementsToFade: elementsToFade 
+            titleElement: text,
+            markerElement: marker,
+            macroEvent: event.macroEvent || false,
+            elementsToFade: elementsToFade,
         });
     });
 
@@ -372,6 +401,29 @@ function updateScene() {
         
         // Applica l'opacità a tutto (descrizioni, barrette e miniature!)
         item.elementsToFade.forEach(el => el.alpha = targetAlpha);
+
+        // --- 2. DISSOLVENZA TITOLI (Il nome dell'evento) ---
+        // Hanno bisogno di meno spazio, quindi appaiono prima (es. 40px)
+        let titleAlpha = 0;
+        if (screenDist > 80 || item.macroEvent) {
+            titleAlpha = 1;
+        } else if (screenDist > 50) {
+            // Sfuma dolcemente quando la distanza è tra i 15 e i 40 pixel
+            titleAlpha = (screenDist - 50) / 30; 
+        }
+        item.titleElement.alpha = titleAlpha;
+
+        // --- 3. DISSOLVENZA PALLINI (Marker) ---
+        let markerAlpha = 0;
+        // I pallini hanno bisogno di pochissimo spazio (es. 12 pixel). 
+        // I macro eventi mostrano il pallino SEMPRE.
+        if (screenDist > 20 || item.macroEvent) {
+            markerAlpha = 1;
+        } else if (screenDist > 8) {
+            // Se la distanza scende sotto i 12px, il pallino sfuma dolcemente fino ai 4px
+            markerAlpha = (screenDist - 8) / 12;
+        }
+        item.markerElement.alpha = markerAlpha;
     });
     // Axis Y is fixed at scale 1
 
@@ -404,3 +456,79 @@ function updateScene() {
         }
     });
 }
+
+
+// **************** FLOATING WINDOW
+
+// ==========================================
+// CREAZIONE FINESTRA FLOTTANTE HTML (MODALE)
+// ==========================================
+const modalOverlay = document.createElement('div');
+modalOverlay.style.position = 'fixed';
+modalOverlay.style.top = '0';
+modalOverlay.style.left = '0';
+modalOverlay.style.width = '100vw';
+modalOverlay.style.height = '100vh';
+modalOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)'; // Sfondo scuro trasparente
+modalOverlay.style.backdropFilter = 'blur(8px)'; // Effetto sfocatura dietro
+modalOverlay.style.display = 'none'; // Parte nascosta
+modalOverlay.style.justifyContent = 'center';
+modalOverlay.style.alignItems = 'center';
+modalOverlay.style.zIndex = '1000'; // Sta sopra a tutto
+
+const modalContent = document.createElement('div');
+modalContent.style.backgroundColor = '#0a0a1a'; // Blu scuro come lo spazio
+modalContent.style.padding = '40px';
+modalContent.style.borderRadius = '16px';
+modalContent.style.maxWidth = '600px';
+modalContent.style.width = '90%';
+modalContent.style.color = '#FFF';
+modalContent.style.fontFamily = 'Inter, Arial, sans-serif';
+modalContent.style.border = '1px solid #333';
+modalContent.style.boxShadow = '0 20px 50px rgba(0,0,0,0.8)';
+modalContent.style.position = 'relative';
+
+const closeBtn = document.createElement('div');
+closeBtn.innerHTML = '✕';
+closeBtn.style.position = 'absolute';
+closeBtn.style.top = '15px';
+closeBtn.style.right = '20px';
+closeBtn.style.fontSize = '24px';
+closeBtn.style.color = '#888';
+closeBtn.style.cursor = 'pointer';
+closeBtn.onclick = () => modalOverlay.style.display = 'none';
+
+const modalTitle = document.createElement('h2');
+modalTitle.style.marginTop = '0';
+modalTitle.style.color = '#FFCC00'; // Giallo/Arancio dei marker
+
+const modalDate = document.createElement('p');
+modalDate.style.color = '#AAAAAA';
+modalDate.style.fontSize = '14px';
+modalDate.style.textTransform = 'uppercase';
+modalDate.style.letterSpacing = '1px';
+
+const modalImage = document.createElement('img');
+modalImage.style.width = '100%';
+modalImage.style.borderRadius = '8px';
+modalImage.style.marginTop = '20px';
+modalImage.style.display = 'none'; // Nascosta di default
+
+const modalDesc = document.createElement('p');
+modalDesc.style.lineHeight = '1.6';
+modalDesc.style.fontSize = '16px';
+modalDesc.style.marginTop = '20px';
+modalDesc.style.color = '#DDDDDD';
+
+modalContent.appendChild(closeBtn);
+modalContent.appendChild(modalTitle);
+modalContent.appendChild(modalDate);
+modalContent.appendChild(modalImage);
+modalContent.appendChild(modalDesc);
+modalOverlay.appendChild(modalContent);
+document.body.appendChild(modalOverlay);
+
+// Chiudi la modale cliccando sullo sfondo sfocato
+modalOverlay.onclick = (e) => {
+    if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+};
